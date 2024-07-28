@@ -1,0 +1,296 @@
+---
+title: "Unveiling Global Joy: An Exploratory Data Analysis of World Happiness"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+# Set a CRAN mirror
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+# Install and load the tidyverse package
+if (!requireNamespace("tidyverse", quietly = TRUE)) {
+  install.packages("tidyverse")
+}
+# The tidyverse provides tools for importing, cleaning, transforming, visualizing, and modeling data.
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+```
+
+# An Introducion 
+Happiness is a universal aspiration, but its determinants and levels vary significantly across different parts of the world.This project aims to explore and analyze the world Happiness Report, a dataset capturing self-reported well-being from various countries.
+
+The world Happiness Report dataset measures happiness based on following indicators: 
+
+* **Life Ladder:** It is a measure of subjective well being on a scale from 0 (worst possible life) to 10 (best possible life). 
+
+* **Log GDP per capita:** The logarithm of a country's economic output per person
+
+* **Social Support:** It is the value showing proportion of people in a country who feel that they have someone to rely on in time of trouble.
+
+* **Healthy life expectancy at birth:** It is the avg no. of years a newborn is expected to live in good health.
+
+* **Freedom to make life choices:** This is the average level of satisfaction with the freedom to choose what to do with one's life. It's a normalized value between 0 and 1.
+
+* **Generosity:** A measure of altruistic behavior, such as charitable donations or helping others.It is a normalized so some values in the dataset may be negative but we will deal with these values during data cleaning.
+
+* **Perceptions of corruption:** It shows the avergae of curruption within the country, scaled from 0 to 1. 
+
+* **Positive affect:** It is average frequency or intensity of Positive emotions experienced, indicating emotional well-being and happiness levels.
+
+* **Negative affect:** It is average frequency or intensity of Negtive emotions experienced, indicating emotional challenges and well-being across population.
+
+In this project, We, Sheetal Jain, Roma Batham, Shivani Sharma, and Surbhi Rai, will leverage our programming skills to 
+
+##### **Visualize** the distribution of happiness  scores across different nations in different years.
+
+##### **Identify** key factors that influence happiness and understand their impact
+
+##### **Analyze** trends and patterns in the happiness data over-time.
+
+##### **Compare** the happiness scores with socio-economics and demographic variables.
+
+## Data Import
+
+Given that our dataset is in CSV format, we will utilize the read_csv() function from the readr package, which is part of the tidyverse library.
+```{r importing data}
+wh <- read.csv("./datasets/world_happiness.csv")
+```
+
+## Data Inspestion
+
+the data inspection phase, we will examine the structure and obtain a brief summary of our dataset using the str() and summary() functions from the base package in R.
+
+### The structure of the world happiness dataset: 
+```{r Data structure}
+str(wh)
+```
+The structure is as follows:
+
+* Country.name: Character type, representing the name of the country.
+
+* year: Integer type, indicating the year of observation.
+
+* Life.Ladder: Numeric type, representing the well-being score.
+
+* Log.GDP.per.capita: Numeric type, representing the logarithm of GDP per capita.
+
+* Social.support: Numeric type, indicating the level of perceived social support.
+
+* Healthy.life.expectancy.at.birth: Numeric type, indicating the healthy life expectancy at birth.
+
+* Freedom.to.make.life.choices: Numeric type, measuring the perceived freedom to make life choices.
+
+* Generosity: Numeric type, representing the generosity index.
+
+* Perceptions.of.corruption: Numeric type, indicating the perception of corruption.
+
+* Positive.affect: Numeric type, measuring the frequency of positive emotions.
+
+* Negative.affect: Numeric type, measuring the frequency of negative emotions.
+
+
+### The brief summary of the world happiness dataset.
+```{r}
+summary(wh)
+```
+
+The dataset spans from 2005 to 2022. The Life Ladder scores, which measure well-being, range from 1.281 to 8.019, with an average score of 5.479. The Log GDP per capita varies from 5.527 to 11.664, averaging 9.390, though 20 values are missing. Social support scores, with some missing values (13), range from 0.2280 to 0.9870, averaging 0.8107. Healthy life expectancy at birth ranges from 6.72 to 74.47 years, with an average of 63.29 years and 54 missing values. Freedom to make life choices, with 33 missing values, averages 0.7479, ranging from 0.2580 to 0.9850. Generosity scores, which have 73 missing values, average near zero, ranging from -0.33800 to 0.70300. Perceptions of corruption, with 116 missing values, average 0.7452, ranging from 0.0350 to 0.9830. Positive affect scores range from 0.1790 to 0.8840, averaging 0.6521, with 24 missing values. Negative affect scores, with 16 missing values, range from 0.0830 to 0.7050, averaging 0.2715.
+
+## Data cleaning 
+
+In this phase, several key tasks are undertaken:
+
+* Handling missing values across various variables within the dataset.
+
+* Addressing meaningless values, such as negative values found in the generosity column.
+
+* Renaming column names to improve clarity and consistency for subsequent analyses. 
+
+Each of these steps is crucial for ensuring data quality and reliability in subsequent statistical analyses and interpretations.
+
+#### Handling missing values
+
+The summary of the dataset reveals the presence of missing values across several variables. Specifically:
+
+* Log GDP per capita: 20 missing values.
+
+* Social support: 13 missing values.
+
+* Healthy life expectancy at birth: 54 missing values.
+
+* Freedom to make life choices: 33 missing values.
+
+* Generosity: 73 missing values.
+
+* Perceptions of corruption: 116 missing values.
+
+* Positive affect: 24 missing values.
+
+* Negative affect: 16 missing values.
+
+We can replace missing values by zero, mean, median, mode, or we can omit the record having missing values. Omitting cause data lose any may affect our analysis significantly. Replacing with mean may not affect much. So, we shall replace with mean. 
+Code Snippet For Removing the missing values
+
+```{r missing value, warning=FALSE}
+wh <- wh %>% 
+  mutate(across(everything(), ~replace_na(.,mean(., na.rm = TRUE))))
+```
+Now, We shall check if there is anymore missing value in the dataset: 
+```{r verifying if there is anymore mising values}
+print(sum(is.na(wh)))
+```
+As we can see there are no more missing values. 
+
+#### Handling Negative Values
+
+We shall first count negative values in each column
+
+```{r count negative values}
+negative_values <- lapply(wh, function(x) sum(x < 0))
+negative_values <- unlist(negative_values)
+negative_values
+```
+We have observed that there are 1,187 negative values in the 'Generosity' column. Generosity is inherently a positive attribute, and thus, negative values may appear counterintuitive. These negative values could indicate below-average generosity in a normalized context. To maintain the integrity and interpretability of the data, we will replace the negative values with the minimum positive values found in the 'Generosity' column.
+
+```{r handle negative values}
+wh <- wh %>% 
+  mutate(Generosity = ifelse(Generosity<0,0,Generosity))
+```
+Now, let's verify if there are any remaining negative values in the dataset:
+```{r ensuring if there are anymore negative values}
+all(wh >= 0)  
+```
+
+#### Renaming column names
+
+It has come to our attention that the column names in the dataset are excessively verbose. To improve clarity and brevity, we will assign them more meaningful and concise names.
+
+```{r renaming column names}
+# Renaming column 'Country.name'
+wh <- wh %>%
+  rename(country = Country.name)
+# Renaming column 'Life.Ladder'
+wh <- wh %>% 
+  rename(life_ladder = Life.Ladder)
+# Renaming column 'Log.GDP.per.capita'
+wh <- wh %>% 
+  rename(gdp = Log.GDP.per.capita)
+# Renaming column 'Social.support
+wh <- wh %>% 
+  rename(social_support = Social.support)
+# Renaming column 'Healthy.life.expectancy.at.birth'
+wh <- wh %>% 
+  rename(life_expectancy = Healthy.life.expectancy.at.birth)
+# Renaming column 'Freedom.to.make.life.choices'
+wh <- wh %>% 
+  rename(freedom = Freedom.to.make.life.choices)
+# Renaming column 'Generosity'
+wh <- wh %>% 
+  rename(generosity = Generosity)
+# Renaming column 'Perceptions.of.corruption'
+wh <- wh %>% 
+  rename(corruption_perception = Perceptions.of.corruption)
+# Renaming column 'Positive.affect'
+wh <- wh %>% 
+  rename(positive_affect = Positive.affect)
+# Renaming column 'Negative.affect'
+wh <- wh %>% 
+  rename(negative_affect = Negative.affect)
+
+colnames(wh)
+```
+
+## Data Analysis
+
+We can employ various analysis techniques such as univariate analysis, bivariate analysis, multivariate analysis, outlier identification, and statistical analysis.
+
+### **Analysis of data distribution of all indicators**
+
+```{r data distribution of all indicators}
+data_subset <- wh %>%
+  select(-c(1, 2))
+
+# Gather data into long format for ggplot
+data_long <- gather(data_subset, key = "variable", value = "value")
+
+# Plotting using ggplot2
+ggplot(data_long, aes(x = value, fill = variable)) +
+  geom_histogram(bins = 30, color = "black", alpha = 0.5) +
+  labs(title = "Distribution of all Indicators of happiness",
+       x = "Value", y = "Frequency") +
+  theme_minimal() +
+  facet_wrap(~ variable, scales = "free")
+
+```
+
+We can describe the distributions of each indicator as follows:
+
+* **Corruption Perception:** The distribution is right-skewed, with a higher concentration of countries towards the higher end of the corruption perception index (more corrupt).
+
+* **Freedom:** The distribution is right-skewed, with a higher concentration of countries towards the higher end of the freedom index (more free).
+
+* **GDP:** The distribution around the center, with a higher concentration of countries towards the higher end of the GDP index (wealthier).
+
+* **Generosity:** The distribution is left-skewed, with a higher concentration of countries towards the lower end of the generosity index (more generous).
+
+* **Life Expectancy:** The distribution is right-skewed, with a higher concentration of countries towards the higher end of the life expectancy index (longer life expectancy).
+
+* **Life Ladder:** The distribution is normally distributed, with a higher concentration of countries towards the higher end of the life ladder index (better quality of life).
+
+* **Negative Affect:** The distribution is normally distributed, with a higher concentration of countries towards the lower end of the negative affect index (less negative affect).
+
+* **Positive Affect:** The distribution is right-skewed, with a higher concentration of countries towards the higher end of the positive affect index (more positive affect).
+
+* **Social Support:** The distribution is right-skewed, with a higher concentration of countries towards the higher end of the social support index (more social support).
+
+### **Analysis of Central Tendency for different indicators over the period 2005-2022**
+
+```{r central tendency analysis}
+calculate_mode <-function(x){
+  tb <- table(x)
+  mode_value <- as.numeric(names(tb)[which.max(tb)])
+  return(mode_value)
+}
+## Central Tendency analysis of Life Ladder of different countries
+
+ct_life_ladder <- wh %>% 
+  group_by(country) %>% 
+  summarise(
+    life_ladder_mean = mean(life_ladder, na.rm = TRUE),
+    life_ladder_median = median(life_ladder, na.rm =  TRUE),
+    life_ladder_mode = calculate_mode(life_ladder)
+  )
+head(ct_life_ladder)
+```
+```{r cta 1}
+
+## Central Tendency analysis of gdp of different countries
+
+ct_gdp <- wh %>% 
+  group_by(country) %>% 
+  summarise(
+    gdp_mean = mean(gdp, na.rm = TRUE),
+    gdp_ladder_median = median(gdp, na.rm =  TRUE),
+    gdp_ladder_mode = calculate_mode(gdp)
+  )
+head(ct_gdp)
+```
+```{r cta 2}
+## Central Tendency analysis of Life Ladder of different countries
+
+ct_life_expectancy <- wh %>% 
+  group_by(country) %>% 
+  summarise(
+    life_expectancy_mean = mean(life_expectancy, na.rm = TRUE),
+    life_expectancy_median = median(life_expectancy, na.rm =  TRUE),
+    life_expectancy_mode = calculate_mode(life_expectancy)
+  )
+head(ct_life_expectancy)
+```
+
+
+## Data Visualisation 
+
+

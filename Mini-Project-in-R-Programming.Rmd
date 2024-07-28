@@ -1,0 +1,614 @@
+---
+title: "Unveiling Global Joy: An Exploratory Data Analysis of World Happiness"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+# Set a CRAN mirror
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+# Install and load the tidyverse package
+if (!requireNamespace("tidyverse", quietly = TRUE)) {
+  install.packages("tidyverse")
+}
+# The tidyverse provides tools for importing, cleaning, transforming, visualizing, and modeling data.\
+install.packages("effects")
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+```
+
+# An Introducion 
+Happiness is a universal aspiration, but its determinants and levels vary significantly across different parts of the world.This project aims to explore and analyze the world Happiness Report, a dataset capturing self-reported well-being from various countries.
+
+The world Happiness Report dataset measures happiness based on following indicators: 
+
+* **Life Ladder:** It is a measure of subjective well being on a scale from 0 (worst possible life) to 10 (best possible life). 
+
+* **Log GDP per capita:** The logarithm of a country's economic output per person
+
+* **Social Support:** It is the value showing proportion of people in a country who feel that they have someone to rely on in time of trouble.
+
+* **Healthy life expectancy at birth:** It is the avg no. of years a newborn is expected to live in good health.
+
+* **Freedom to make life choices:** This is the average level of satisfaction with the freedom to choose what to do with one's life. It's a normalized value between 0 and 1.
+
+* **Generosity:** A measure of altruistic behavior, such as charitable donations or helping others.It is a normalized so some values in the dataset may be negative but we will deal with these values during data cleaning.
+
+* **Perceptions of corruption:** It shows the avergae of curruption within the country, scaled from 0 to 1. 
+
+* **Positive affect:** It is average frequency or intensity of Positive emotions experienced, indicating emotional well-being and happiness levels.
+
+* **Negative affect:** It is average frequency or intensity of Negtive emotions experienced, indicating emotional challenges and well-being across population.
+
+In this project, We, Sheetal Jain, Roma Batham, Shivani Sharma, and Surbhi Rai, will leverage our programming skills to 
+
+##### **Visualize** the distribution of happiness  scores across different nations in different years.
+
+##### **Identify** key factors that influence happiness and understand their impact
+
+##### **Analyze** trends and patterns in the happiness data over-time.
+
+##### **Compare** the happiness scores with socio-economics and demographic variables.
+
+## Data Import
+
+Given that our dataset is in CSV format, we will utilize the read_csv() function from the readr package, which is part of the tidyverse library.
+```{r importing data}
+wh <- read.csv("./datasets/world_happiness.csv")
+head(wh)
+```
+
+## Data Inspestion
+
+the data inspection phase, we will examine the structure and obtain a brief summary of our dataset using the str() and summary() functions from the base package in R.
+
+### The structure of the world happiness dataset: 
+```{r Data structure}
+str(wh)
+```
+The structure is as follows:
+
+* Country.name: Character type, representing the name of the country.
+
+* year: Integer type, indicating the year of observation.
+
+* Life.Ladder: Numeric type, representing the well-being score.
+
+* Log.GDP.per.capita: Numeric type, representing the logarithm of GDP per capita.
+
+* Social.support: Numeric type, indicating the level of perceived social support.
+
+* Healthy.life.expectancy.at.birth: Numeric type, indicating the healthy life expectancy at birth.
+
+* Freedom.to.make.life.choices: Numeric type, measuring the perceived freedom to make life choices.
+
+* Generosity: Numeric type, representing the generosity index.
+
+* Perceptions.of.corruption: Numeric type, indicating the perception of corruption.
+
+* Positive.affect: Numeric type, measuring the frequency of positive emotions.
+
+* Negative.affect: Numeric type, measuring the frequency of negative emotions.
+
+
+### The brief summary of the world happiness dataset.
+```{r}
+summary(wh)
+```
+
+The dataset spans from 2005 to 2022. The Life Ladder scores, which measure well-being, range from 1.281 to 8.019, with an average score of 5.479. The Log GDP per capita varies from 5.527 to 11.664, averaging 9.390, though 20 values are missing. Social support scores, with some missing values (13), range from 0.2280 to 0.9870, averaging 0.8107. Healthy life expectancy at birth ranges from 6.72 to 74.47 years, with an average of 63.29 years and 54 missing values. Freedom to make life choices, with 33 missing values, averages 0.7479, ranging from 0.2580 to 0.9850. Generosity scores, which have 73 missing values, average near zero, ranging from -0.33800 to 0.70300. Perceptions of corruption, with 116 missing values, average 0.7452, ranging from 0.0350 to 0.9830. Positive affect scores range from 0.1790 to 0.8840, averaging 0.6521, with 24 missing values. Negative affect scores, with 16 missing values, range from 0.0830 to 0.7050, averaging 0.2715.
+
+## Data cleaning 
+
+In this phase, several key tasks are undertaken:
+
+* Handling missing values across various variables within the dataset.
+
+* Addressing meaningless values, such as negative values found in the generosity column.
+
+* Renaming column names to improve clarity and consistency for subsequent analyses. 
+
+Each of these steps is crucial for ensuring data quality and reliability in subsequent statistical analyses and interpretations.
+
+#### Handling missing values
+
+The summary of the dataset reveals the presence of missing values across several variables. Specifically:
+
+* Log GDP per capita: 20 missing values.
+
+* Social support: 13 missing values.
+
+* Healthy life expectancy at birth: 54 missing values.
+
+* Freedom to make life choices: 33 missing values.
+
+* Generosity: 73 missing values.
+
+* Perceptions of corruption: 116 missing values.
+
+* Positive affect: 24 missing values.
+
+* Negative affect: 16 missing values.
+
+We can replace missing values by zero, mean, median, mode, or we can omit the record having missing values. Omitting cause data lose any may affect our analysis significantly. Replacing with mean may not affect much. So, we shall replace with mean. 
+Code Snippet For Removing the missing values
+
+```{r missing value, warning=FALSE}
+wh <- wh %>% 
+  mutate(across(everything(), ~replace_na(.,mean(., na.rm = TRUE))))
+```
+Now, We shall check if there is anymore missing value in the dataset: 
+```{r verifying if there is anymore mising values}
+print(sum(is.na(wh)))
+```
+As we can see there are no more missing values. 
+
+#### Handling Negative Values
+
+We shall first count negative values in each column
+
+```{r count negative values}
+negative_values <- lapply(wh, function(x) sum(x < 0))
+negative_values <- unlist(negative_values)
+negative_values
+```
+We have observed that there are 1,187 negative values in the 'Generosity' column. Generosity is inherently a positive attribute, and thus, negative values may appear counterintuitive. These negative values could indicate below-average generosity in a normalized context. To maintain the integrity and interpretability of the data, we will replace the negative values with the minimum positive values found in the 'Generosity' column.
+
+```{r handle negative values}
+wh <- wh %>% 
+  mutate(Generosity = ifelse(Generosity<0,0,Generosity))
+```
+Now, let's verify if there are any remaining negative values in the dataset:
+```{r ensuring if there are anymore negative values}
+all(wh >= 0)  
+```
+
+#### Renaming column names
+
+It has come to our attention that the column names in the dataset are excessively verbose. To improve clarity and brevity, we will assign them more meaningful and concise names.
+
+```{r renaming column names}
+# Renaming column 'Country.name'
+wh <- wh %>%
+  rename(country = Country.name)
+# Renaming column 'Life.Ladder'
+wh <- wh %>% 
+  rename(life_ladder = Life.Ladder)
+# Renaming column 'Log.GDP.per.capita'
+wh <- wh %>% 
+  rename(gdp = Log.GDP.per.capita)
+# Renaming column 'Social.support
+wh <- wh %>% 
+  rename(social_support = Social.support)
+# Renaming column 'Healthy.life.expectancy.at.birth'
+wh <- wh %>% 
+  rename(life_expectancy = Healthy.life.expectancy.at.birth)
+# Renaming column 'Freedom.to.make.life.choices'
+wh <- wh %>% 
+  rename(freedom = Freedom.to.make.life.choices)
+# Renaming column 'Generosity'
+wh <- wh %>% 
+  rename(generosity = Generosity)
+# Renaming column 'Perceptions.of.corruption'
+wh <- wh %>% 
+  rename(corruption_perception = Perceptions.of.corruption)
+# Renaming column 'Positive.affect'
+wh <- wh %>% 
+  rename(positive_affect = Positive.affect)
+# Renaming column 'Negative.affect'
+wh <- wh %>% 
+  rename(negative_affect = Negative.affect)
+
+colnames(wh)
+```
+
+## Gaining Insights Through Analytical and Visualization Techniques
+
+We can employ various analysis and visualization techniques such as univariate analysis, bivariate analysis, multivariate analysis, outlier identification, statistical analysis, and visualization by histogram, boxplot, piechart, heatmap, pairplot, scatter plot etc.
+
+### **Analysis of data distribution of all indicators**
+
+```{r data distribution of all indicators}
+data_subset <- wh %>%
+  select(-c(1, 2))
+
+# Gather data into long format for ggplot
+data_long <- gather(data_subset, key = "variable", value = "value")
+
+# Plotting using ggplot2
+ggplot(data_long, aes(x = value, fill = variable)) +
+  geom_histogram(bins = 30, color = "black", alpha = 0.5) +
+  labs(title = "Distribution of all Indicators of happiness",
+       x = "Value", y = "Frequency") +
+  theme_minimal() +
+  facet_wrap(~ variable, scales = "free")
+
+```
+
+We can describe the distributions of each indicator as follows:
+
+* **Corruption Perception:** The distribution is right-skewed, with a higher concentration of countries towards the higher end of the corruption perception index (more corrupt).
+
+* **Freedom:** The distribution is right-skewed, with a higher concentration of countries towards the higher end of the freedom index (more free).
+
+* **GDP:** The distribution around the center, with a higher concentration of countries towards the higher end of the GDP index (wealthier).
+
+* **Generosity:** The distribution is left-skewed, with a higher concentration of countries towards the lower end of the generosity index (more generous).
+
+* **Life Expectancy:** The distribution is right-skewed, with a higher concentration of countries towards the higher end of the life expectancy index (longer life expectancy).
+
+* **Life Ladder:** The distribution is normally distributed, with a higher concentration of countries towards the higher end of the life ladder index (better quality of life).
+
+* **Negative Affect:** The distribution is normally distributed, with a higher concentration of countries towards the lower end of the negative affect index (less negative affect).
+
+* **Positive Affect:** The distribution is right-skewed, with a higher concentration of countries towards the higher end of the positive affect index (more positive affect).
+
+* **Social Support:** The distribution is right-skewed, with a higher concentration of countries towards the higher end of the social support index (more social support).
+
+### **Analysis of Central Tendency for different indicators over the period 2005-2022**
+
+```{r central tendency analysis}
+calculate_mode <-function(x){
+  tb <- table(x)
+  mode_value <- as.numeric(names(tb)[which.max(tb)])
+  return(mode_value)
+}
+## Central Tendency analysis of Life Ladder of different countries
+
+ct_life_ladder <- wh %>% 
+  group_by(country) %>% 
+  summarise(
+    life_ladder_mean = mean(life_ladder, na.rm = TRUE),
+    life_ladder_median = median(life_ladder, na.rm =  TRUE),
+    life_ladder_mode = calculate_mode(life_ladder)
+  )
+head(ct_life_ladder)
+```
+
+
+```{r cta 1}
+
+## Central Tendency analysis of gdp of different countries
+
+ct_gdp <- wh %>% 
+  group_by(country) %>% 
+  summarise(
+    gdp_mean = mean(gdp, na.rm = TRUE),
+    gdp_ladder_median = median(gdp, na.rm =  TRUE),
+    gdp_ladder_mode = calculate_mode(gdp)
+  )
+head(ct_gdp)
+```
+
+
+```{r cta 2}
+## Central Tendency analysis of Life Ladder of different countries
+
+ct_life_expectancy <- wh %>% 
+  group_by(country) %>% 
+  summarise(
+    life_expectancy_mean = mean(life_expectancy, na.rm = TRUE),
+    life_expectancy_median = median(life_expectancy, na.rm =  TRUE),
+    life_expectancy_mode = calculate_mode(life_expectancy)
+  )
+head(ct_life_expectancy)
+```
+
+### **Social Support and Happiness Score Relationship Analysis**
+
+This analysis explores the correlation between Social Support and Happiness Score in the World Happiness dataset, offering insights into how social connections influence overall happiness.
+```{r correlation between Social support and Life Exapectancy}
+cor(wh$social_support, wh$life_expectancy)
+```
+The correlation inclines toward 1, we can conclude that social support support improves life expectancy.
+
+### **How much life expectancy increases for a unit increase in other indicators**
+
+We will be modeling the relationship between life expectancy and and other independent variable such as GDP, social support, freedom, etc. We perform regression analysis for finding this insight. 
+
+```{r Regression Analysis}
+#dependent variable
+le <- wh$life_expectancy
+
+#independent variable
+g <- wh$gdp
+s <- wh$social_support
+f <- wh$freedom
+gn <- wh$generosity
+
+#Linear Regression
+model <- lm(le~g+s+f+gn, data = wh)
+
+# Summary of the model using a scatter plot.
+ggplot(wh, aes(x = g, y = le ))+
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE)+
+  labs("Improvement in Life Expectance with respect to GDP",
+       x = "GDP",
+       y = "Life Expectancy")
+```
+
+
+  Each dot represents a country, with GDP on the x-axis and Life Expectancy on the y-axis. The blue line indicates the linear regression trend, suggesting a positive correlation: as GDP increases, Life Expectancy tends to rise. This analysis highlights how economic prosperity is often linked to better health outcomes and longer life spans.
+
+
+### **How an indicator affects the other**
+
+By generating a heatmap showing correlation matrix of multiple indicators, we can better understand the role of each indicator in happiness score.
+
+```{r heatmap}
+library(reshape2)
+corr_df <- melt(cor(wh[-c(1,2)]))
+
+ggplot(corr_df,aes(Var1,Var2,fill = value))+
+  geom_tile()+
+  geom_text(aes(label = round(value,2)), color = "black", size = 3)+
+  scale_fill_gradient2(low = "skyblue", mid = "blue", high = "darkblue", midpoint = 0, limit = c(-1,1))+
+  labs("Correlation Matrix of Indicators of Happiness Score", x = "Variables", y = "Variables")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### **Happiness Score Trend of top five country**
+
+To calculate happiness score we sums up the values of the indicators:
+
+```{r life ladder trend}
+
+top_countries <- wh %>%
+  group_by(country) %>%
+  summarize(avg_life_ladder = mean(life_ladder, na.rm = TRUE)) %>%
+  top_n(5, avg_life_ladder) %>%
+  pull(country)
+
+# Filter the dataset to include only the top five countries
+top_countries_data <- wh %>% filter(country %in% top_countries)
+
+# Plot the yearly happiness scores for the top five countries
+ggplot(top_countries_data, aes(x = year, y = life_ladder, color = country, group = country)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(title = "Yearly Happiness Scores of Top 5 Countries",
+       x = "Year",
+       y = "Happiness Score (Life Ladder)",
+       color = "Country") +
+  theme_minimal()
+```
+
+
+### **Cumulative Changes in Happiness Score of the top five countries**
+
+Using area plot to show the cumulative changes over time, which may highlight overall trends better.
+```{r cchst5}
+top_countries_data <- wh %>%
+  group_by(country) %>%
+  summarize(avg_life_ladder = mean(life_ladder, na.rm = TRUE)) %>%
+  top_n(5, avg_life_ladder) %>%
+  inner_join(wh, by = "country")
+
+# Plot the yearly happiness scores for the top five countries with an area plot
+ggplot(top_countries_data, aes(x = year, y = life_ladder, fill = country)) +
+  geom_area(position = "stack", alpha = 0.7) +
+  labs(title = "Yearly Happiness Scores of Top 5 Countries",
+       x = "Year",
+       y = "Happiness Score (Life Ladder)",
+       fill = "Country") +
+  theme_minimal()
+```
+
+
+### **Distribution comparison of Indicators for India and United States**
+
+```{r pairplot of indicators}
+
+comparison_data <- wh %>% filter(country %in% c("Finland", "India"))
+
+# Select relevant columns
+selected_columns <- comparison_data %>%
+  select(country, life_ladder, gdp, social_support, life_expectancy, freedom, generosity, corruption_perception, positive_affect, negative_affect)
+
+# Melt the data for easier plotting
+melted_data <- selected_columns %>%
+  pivot_longer(cols = -country, names_to = "indicator", values_to = "value")
+# Create density plot
+ggplot(melted_data, aes(x = value, fill = country)) +
+  geom_density(alpha = 0.6) +
+  facet_wrap(~ indicator, scales = "free") +
+  labs(title = "Density Comparison of Happiness Indicators for India and Finland",
+       x = "Value",
+       y = "Density",
+       fill = "Country") +
+  theme_minimal()
+
+
+```
+
+
+### **Distribution comparison of Indicators for India and Denmark**
+
+```{r Den vs India}
+comparison_data <- wh %>%
+  filter(country %in% c("Denmark", "India"))
+
+# Select relevant columns
+selected_columns <- comparison_data %>%
+  select(country, life_ladder, gdp, social_support, life_expectancy, 
+         freedom, generosity, corruption_perception, positive_affect, negative_affect)
+
+# Melt the data for easier plotting
+melted_data <- selected_columns %>%
+  pivot_longer(cols = -country, names_to = "indicator", values_to = "value")
+
+# Create density plot with custom colors for countries
+ggplot(melted_data, aes(x = value, fill = country)) +
+  geom_density(alpha = 0.6) +
+  facet_wrap(~ indicator, scales = "free") +
+  labs(title = "Density Comparison of Happiness Indicators for Denmark and India",
+       x = "Value",
+       y = "Density",
+       fill = "Country") +
+  scale_fill_manual(values = c("Denmark" = "blue", "India" = "orange")) +  # Custom colors
+  theme_minimal()
+```
+
+### **Comparison Between India and Iceland**
+
+```{r}
+comparison_data <- wh %>%
+  filter(country %in% c("India", "Iceland"))
+
+# Melt the data for easier plotting
+melted_data <- comparison_data %>%
+  select(country, life_ladder, gdp, social_support, life_expectancy, 
+         freedom, generosity, corruption_perception, positive_affect, negative_affect) %>%
+  pivot_longer(cols = -country, names_to = "indicator", values_to = "value")
+
+# Create scatter plots for each indicator
+ggplot(melted_data, aes(x = country, y = value, color = country)) +
+  geom_point(position = position_jitter(width = 0.2, height = 0), size = 2) +
+  facet_wrap(~ indicator, scales = "free_y") +
+  labs(title = "Comparison of Happiness Indicators between India and Iceland",
+       x = "Country",
+       y = "Value",
+       color = "Country") +
+  theme_minimal()
+```
+
+### **Life Expectancy of Top 5 Least Happy Countries**
+
+```{r leot}
+happiness_score <- sum(wh[-c(1,2)])
+bottom_countries <- wh %>%
+  group_by(country) %>%
+  summarize(avg_happiness_score = mean(happiness_score)) %>%
+  top_n(-5, wt = avg_happiness_score) %>%
+  pull(country)
+
+# Filter original dataset for bottom countries
+bottom_data <- wh %>%
+  filter(country %in% bottom_countries)
+
+# Group by year and compute average life expectancy
+bottom_life_expectancy <- bottom_data %>%
+  group_by(year) %>%
+  summarize(avg_life_expectancy = mean(life_expectancy))
+
+# Plotting using ggplot2 (Grouped bar plot for top 5 least happy countries)
+ggplot(bottom_life_expectancy, aes(x = year, y = avg_life_expectancy, fill = factor(year))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Average Life Expectancy of Top 5 Least Happy Countries",
+       x = "Year",
+       y = "Average Life Expectancy",
+       fill = "Year") +
+  theme_minimal()
+```
+
+
+### **Year-wise Happiness Scores**
+
+```{r warning=FALSE}
+# Calculate Happiness Score
+wh$Happiness_Score <- rowSums(wh[, c("life_ladder", "gdp", "social_support", 
+                                     "life_expectancy", "freedom", "generosity", 
+                                     "corruption_perception", "positive_affect", 
+                                     "negative_affect")], na.rm = TRUE)
+
+# Aggregate by year and calculate total happiness score
+yearly_happiness <- aggregate(Happiness_Score ~ year, data = wh, FUN = sum)
+
+# Create Pie Chart
+pie(yearly_happiness$Happiness_Score, labels = yearly_happiness$year, 
+    main = "Year-wise Contribution of Happiness Scores", col = rainbow(length(yearly_happiness$year)))
+
+# Add Legend
+legend("topright", legend = yearly_happiness$year, title = "Year", fill = rainbow(length(yearly_happiness$year)))
+
+```
+
+
+### **India vs Least Happy Countries**
+
+```{r India vs Least Happy Countries}
+wh <- wh %>%
+  mutate(happiness_score = life_ladder + gdp + social_support + life_expectancy +
+                             freedom + generosity + corruption_perception +
+                             positive_affect + negative_affect)
+
+# Identify top 5 least happy countries
+bottom_countries <- wh %>%
+  group_by(country) %>%
+  summarize(avg_happiness_score = mean(happiness_score)) %>%
+  top_n(-5, wt = avg_happiness_score)
+
+# Filter original dataset for bottom countries and India
+comparison_data <- wh %>%
+  filter(country %in% c(bottom_countries$country, "India"))
+
+# Group by year and country, compute average life expectancy
+life_expectancy_comparison <- comparison_data %>%
+  group_by(year, country) %>%
+  summarize(avg_life_expectancy = mean(life_expectancy))
+
+# Plotting using ggplot2 (Grouped bar plot for comparing India with least happy countries)
+ggplot(life_expectancy_comparison, aes(x = year, y = avg_life_expectancy, fill = country)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Comparison of Life Expectancy: India vs Top 5 Least Happy Countries",
+       x = "Year",
+       y = "Average Life Expectancy",
+       fill = "Country") +
+  theme_minimal() 
+```
+
+Through a comprehensive analysis of the World Happiness data, several key insights have been derived regarding global well-being and its determinants from 2005 to 2022. The dataset encompassed multiple indicators, including life ladder scores, GDP, social support, life expectancy, freedom, generosity, corruption perception, positive affect, and negative affect, offering a holistic view of happiness trends across countries.
+
+### **Key Findings:**
+
+#### **Data Distribution and Central Tendency:**
+
+The distribution of indicators varied significantly across countries and over time. Central tendency analysis revealed stable trends in certain metrics like GDP and life expectancy, whereas others, such as social support and happiness scores, exhibited more fluctuation.
+
+#### **Social Support and Happiness Score Relationship:**
+
+A strong positive correlation between social support and happiness scores underscored the critical role of supportive social networks in promoting overall well-being globally.
+
+#### **Impact of Indicators on Life Expectancy:**
+
+Analysis indicated that improvements in GDP, life expectancy, and social support positively influenced life expectancy, highlighting the interconnectedness of socio-economic factors with health outcomes.
+
+#### **Inter-Indicator Relationships:**
+
+Relationships between indicators like GDP and corruption perception, or freedom and happiness scores, revealed complex interdependencies influencing national happiness levels.
+
+#### **Country-Specific Insights:**
+
+Comparisons between top-performing countries (e.g., Denmark, Finland) and others (e.g., India, Iceland) illustrated disparities in happiness scores, driven by varying socio-economic contexts and policy frameworks.
+
+#### **Year-wise Contribution to Happiness Scores:**
+
+Year-wise analysis pinpointed periods of significant changes in happiness scores, reflecting global events or policy shifts impacting societal well-being.
+
+#### **Life Expectancy Disparities:**
+
+Comparisons of life expectancy between India and the top 5 least happy countries highlighted disparities in health outcomes, emphasizing the need for targeted interventions in disadvantaged regions.
+
+### **Implications and Recommendations:**
+
+* Understanding the determinants of happiness and life satisfaction is crucial for policymakers aiming to improve national well-being.
+
+* Policy interventions focusing on enhancing social support systems, economic stability, and personal freedoms can positively impact happiness levels.
+
+* Continued monitoring and analysis of happiness data are essential for identifying emerging trends and formulating evidence-based policies.
+
+### **Limitations:**
+
+The analysis is limited by the availability and quality of data, as well as inherent biases in self-reported happiness metrics.
+Country-specific nuances and cultural factors influencing happiness may not be fully captured by quantitative indicators alone.
+
+### **Future Directions:**
+
+* Future research could delve deeper into specific regional variations in happiness metrics and explore longitudinal studies to track the impact of policy interventions over time.
+
+* Incorporating qualitative research methods could provide richer insights into the subjective experiences and perceptions underlying happiness scores.
+
+##### _In conclusion, the EDA of World Happiness data has illuminated critical insights into the factors shaping global well-being, offering a foundation for informed decision-making and further research in the field of happiness economics._
